@@ -86,3 +86,52 @@ shuffled_image = arnold_cat_map(binary_image)
 cv2.imshow("Shuffled Image", shuffled_image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+def divide_into_blocks(image):
+    height, width = image.shape
+    blocks = []
+    for y in range(0, height, 4):
+        for x in range(0, width, 4):
+            block = image[y:y+4, x:x+4]
+            blocks.append(block)
+    return blocks
+
+def count_black_pixels(block):
+    return np.sum(block)
+
+def generate_random_sequence(blocks):
+    sequence = []
+    for block in blocks:
+        black_pixel_count = count_black_pixels(block)
+        value = 0 if black_pixel_count % 2 == 0 else 1
+        sequence.append(value)
+    return sequence
+
+def zigzag_scan(blocks):
+    sequence = []
+    num_blocks = len(blocks)
+    for i in range(num_blocks):
+        if i % 2 == 0:
+            sequence.append(blocks[i])
+        else:
+            sequence.append(int(not blocks[i]))
+    return sequence
+
+# Example usage
+binary_image = transform_to_binary("lena.png")
+shuffled_image = arnold_cat_map(binary_image)
+
+# Divide into blocks
+blocks = divide_into_blocks(shuffled_image)
+
+# Generate random sequence
+random_sequence = generate_random_sequence(blocks)
+
+# Zigzag scan
+zigzag_sequence = zigzag_scan(random_sequence)
+
+# Convert the sequence to numpy array
+random_sequence_array = np.array(zigzag_sequence)
+
+# Display the random sequence
+print(random_sequence_array)
