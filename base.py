@@ -109,9 +109,10 @@ def zigzag_scan(blocks):
 
 
 def main():
-    binary_image = transform_to_binary("4000.jpg")
     # binary_image = transform_to_binary("lena.png")
+    # binary_image = transform_to_binary("cat.jpg")
     # binary_image = transform_to_binary("3000.jpg")
+    binary_image = transform_to_binary("4000.jpg")
 
     shuffled_image = arnold_cat_map(binary_image)
     blocks = divide_into_blocks(shuffled_image)
@@ -137,15 +138,23 @@ def main():
     plt.ylabel("Frequency")
     plt.show()
 
-    # saving bins
-    with open("binary_image.bin", "wb") as f:
-        binary_image.flatten().tofile(f)
+    # saving bins 
+    # with open("r.bin", "wb") as f:
+    #     binary_image.flatten().tofile(f)
 
-    data_array = np.array(random_sequence_array, dtype=np.uint8)
+    # with open("random_sequence_array.bin", "wb") as f:
+    #     random_sequence_array.tofile(f)
 
-    with open("data.txt", "wb") as f:
-        data_array.tofile(f)
+    #saving txts
+    flattened_image = binary_image.flatten()
+    binary_image_str = ''.join(str(pixel) for pixel in flattened_image)
+    with open("binary_image.txt", "w") as f:
+        f.write(binary_image_str)
 
+    random_sequence_str = ''.join(str(bit) for bit in random_sequence_array)
+    with open("random_sequence_array.txt", "w") as f:
+        f.write(random_sequence_str)
+        
 
 if __name__ == "__main__":
     main()
