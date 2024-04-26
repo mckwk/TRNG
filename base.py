@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def grayscale(image):
@@ -39,20 +40,20 @@ def transform_to_binary(image_path):
     return binary_image
 
 
-def arnold_cat_map(image, iterations=7):
+def arnold_cat_map(image, iterations=7):  # post-processing
     height, width = image.shape
     image_flat = image.flatten()
 
     # Set parameters
     p = 1
     q = 1
-    N = 512
+    N = 3000
 
     permutation_matrix = np.array([[1, p], [q, (p * q + 1) % N]])
 
     # Iterate the Arnold cat map
     for _ in range(iterations):
-    
+
         image_flat = image_flat.reshape((height, width))
         x, y = np.meshgrid(np.arange(width), np.arange(height))
 
@@ -66,6 +67,7 @@ def arnold_cat_map(image, iterations=7):
     shuffled_image = image_flat.reshape((height, width))
 
     return shuffled_image
+
 
 # cv2.imshow("Shuffled Image", shuffled_image)
 # cv2.waitKey(0)
@@ -105,16 +107,43 @@ def zigzag_scan(blocks):
             sequence.append(int(not blocks[i]))
     return sequence
 
-binary_image = transform_to_binary("lena.png")
-shuffled_image = arnold_cat_map(binary_image)
 
-# Divide into blocks
-blocks = divide_into_blocks(shuffled_image)
+def main():
+    binary_image = transform_to_binary("cat.jpg")
+    # binary_image = transform_to_binary("lena.png")
+    # binary_image = transform_to_binary("3000.jpg")
 
-# Generate random sequence
-random_sequence = generate_random_sequence(blocks)
-zigzag_sequence = zigzag_scan(random_sequence)
-random_sequence_array = np.array(zigzag_sequence)
+    shuffled_image = arnold_cat_map(binary_image)
+    blocks = divide_into_blocks(shuffled_image)
+    random_sequence = generate_random_sequence(blocks)
+    zigzag_sequence = zigzag_scan(random_sequence)
+    random_sequence_array = np.array(zigzag_sequence)
 
-with np.printoptions(threshold=np.inf):
-    print(random_sequence_array)
+    # with np.printoptions(threshold=np.inf):
+    #     print(random_sequence_array)
+
+    eight_bit_array = np.array(
+        [
+            int("".join(map(str, random_sequence_array[i : i + 8])), 2)
+            for i in range(0, len(random_sequence_array), 8)
+        ]
+    )
+    print(eight_bit_array)
+    print(len(eight_bit_array))
+
+    plt.hist(eight_bit_array, bins=range(256), color="blue")
+    plt.title("Histogram of Eight-bit Numbers")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.show()
+
+    # saving bins
+    with open("binary_image.bin", "wb") as f:
+        binary_image.flatten().tofile(f)
+
+    with open("random_sequence_array.bin", "wb") as f:
+        random_sequence_array.tofile(f)
+
+
+if __name__ == "__main__":
+    main()
