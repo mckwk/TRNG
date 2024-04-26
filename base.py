@@ -47,7 +47,7 @@ def arnold_cat_map(image, iterations=7):  # post-processing
     # Set parameters
     p = 1
     q = 1
-    N = 3000
+    N = 4000
 
     permutation_matrix = np.array([[1, p], [q, (p * q + 1) % N]])
 
@@ -109,7 +109,7 @@ def zigzag_scan(blocks):
 
 
 def main():
-    binary_image = transform_to_binary("cat.jpg")
+    binary_image = transform_to_binary("4000.jpg")
     # binary_image = transform_to_binary("lena.png")
     # binary_image = transform_to_binary("3000.jpg")
 
@@ -141,8 +141,10 @@ def main():
     with open("binary_image.bin", "wb") as f:
         binary_image.flatten().tofile(f)
 
-    with open("random_sequence_array.bin", "wb") as f:
-        random_sequence_array.tofile(f)
+    data_array = np.array(random_sequence_array, dtype=np.uint8)
+
+    with open("data.txt", "wb") as f:
+        data_array.tofile(f)
 
 
 if __name__ == "__main__":
