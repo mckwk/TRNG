@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time
 
 def grayscale(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -32,7 +32,6 @@ def error_diffusion_dithering(image):
 
 
 def transform_to_binary(image_path):
-
     color_image = cv2.imread(image_path)
     gray_image = grayscale(color_image)
     binary_image = error_diffusion_dithering(gray_image)
@@ -53,14 +52,13 @@ def arnold_cat_map(image, iterations=7):  # post-processing
 
     # Iterate the Arnold cat map
     for _ in range(iterations):
-
         image_flat = image_flat.reshape((height, width))
         x, y = np.meshgrid(np.arange(width), np.arange(height))
 
         # Apply the permutation to the image coordinates
         new_coords = (
-            permutation_matrix @ np.array([x.flatten(), y.flatten()])
-        ) % height
+                             permutation_matrix @ np.array([x.flatten(), y.flatten()])
+                     ) % height
 
         image_flat = image_flat[new_coords[1], new_coords[0]]
 
@@ -69,17 +67,12 @@ def arnold_cat_map(image, iterations=7):  # post-processing
     return shuffled_image
 
 
-# cv2.imshow("Shuffled Image", shuffled_image)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-
 def divide_into_blocks(image):
     height, width = image.shape
     blocks = []
     for y in range(0, height, 4):
         for x in range(0, width, 4):
-            block = image[y : y + 4, x : x + 4]
+            block = image[y: y + 4, x: x + 4]
             blocks.append(block)
     return blocks
 
@@ -108,11 +101,17 @@ def zigzag_scan(blocks):
     return sequence
 
 
+def entropy(probabilities):
+    probabilities[probabilities == 0] = 1
+    return -np.sum(probabilities * np.log2(probabilities))
+
+
 def main():
-    # binary_image = transform_to_binary("lena.png")
+    start_time = time.time()
+    binary_image = transform_to_binary("lena.png")
     # binary_image = transform_to_binary("cat.jpg")
     # binary_image = transform_to_binary("3000.jpg")
-    binary_image = transform_to_binary("4000.jpg")
+    # binary_image = transform_to_binary("4000.jpg")
 
     shuffled_image = arnold_cat_map(binary_image)
     blocks = divide_into_blocks(shuffled_image)
@@ -120,41 +119,50 @@ def main():
     zigzag_sequence = zigzag_scan(random_sequence)
     random_sequence_array = np.array(zigzag_sequence)
 
-    # with np.printoptions(threshold=np.inf):
-    #     print(random_sequence_array)
-
     eight_bit_array = np.array(
         [
-            int("".join(map(str, random_sequence_array[i : i + 8])), 2)
+            int("".join(map(str, random_sequence_array[i: i + 8])), 2)
             for i in range(0, len(random_sequence_array), 8)
         ]
     )
+    stop_time = time.time()
     print(eight_bit_array)
     print(len(eight_bit_array))
-
-    plt.hist(eight_bit_array, bins=range(256), color="blue")
+    plt.hist(eight_bit_array, bins=range(256), color="blue", density=True)
     plt.title("Histogram of Eight-bit Numbers")
     plt.xlabel("Value")
-    plt.ylabel("Frequency")
+    plt.ylabel("Probability Density")
     plt.show()
 
-    # saving bins 
-    # with open("r.bin", "wb") as f:
-    #     binary_image.flatten().tofile(f)
+    entropy_value = entropy(np.histogram(eight_bit_array, bins=range(256), density=True)[0])
+    print("Entropy:", entropy_value)
 
-    # with open("random_sequence_array.bin", "wb") as f:
-    #     random_sequence_array.tofile(f)
-
-    #saving txts
+    # saving txts
     flattened_image = binary_image.flatten()
     binary_image_str = ''.join(str(pixel) for pixel in flattened_image)
     with open("binary_image.txt", "w") as f:
-        f.write(binary_image_str)
+        f.write(binary_image_str.replace("255", "1"))
 
     random_sequence_str = ''.join(str(bit) for bit in random_sequence_array)
     with open("random_sequence_array.txt", "w") as f:
         f.write(random_sequence_str)
-        
+
+    with open('binary_image.txt', 'r') as file:
+        binary_image_str = file.read().strip()
+
+    binary_segments = [binary_image_str[i:i + 8] for i in range(0, len(binary_image_str), 8)]
+    extractor_array = np.array([int(segment, 2) for segment in binary_segments])
+    print(extractor_array)
+
+    plt.hist(extractor_array, bins=range(256), color="blue", density=True)
+    plt.title("Histogram after extractor")
+    plt.xlabel("Value")
+    plt.ylabel("Probability Density")
+    plt.show()
+
+    duration = stop_time - start_time
+    print("Czas trwania:", duration, "sekund")
+
 
 if __name__ == "__main__":
     main()
