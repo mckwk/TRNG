@@ -1,7 +1,9 @@
+import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from PIL import Image
 
 def grayscale(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -106,59 +108,84 @@ def entropy(probabilities):
     return -np.sum(probabilities * np.log2(probabilities))
 
 
-def main():
-    start_time = time.time()
-    binary_image = transform_to_binary("lena.png")
-    # binary_image = transform_to_binary("cat.jpg")
-    # binary_image = transform_to_binary("3000.jpg")
-    # binary_image = transform_to_binary("4000.jpg")
-
+def process_image(image_path):
+    binary_image = transform_to_binary(image_path)
+    binary_image_str = ''.join(str(pixel) for pixel in binary_image.flatten()).replace("255", "1")
     shuffled_image = arnold_cat_map(binary_image)
     blocks = divide_into_blocks(shuffled_image)
     random_sequence = generate_random_sequence(blocks)
     zigzag_sequence = zigzag_scan(random_sequence)
     random_sequence_array = np.array(zigzag_sequence)
+    
 
-    eight_bit_array = np.array(
-        [
-            int("".join(map(str, random_sequence_array[i: i + 8])), 2)
-            for i in range(0, len(random_sequence_array), 8)
-        ]
-    )
-    stop_time = time.time()
-    print(eight_bit_array)
-    print(len(eight_bit_array))
-    plt.hist(eight_bit_array, bins=range(256), color="blue", density=True)
+    with open("binary_image.txt", "a") as file:
+        file.write(binary_image_str)
+    
+    with open("random_sequence_array.txt", "a") as file:
+        file.write(''.join(str(pixel) for pixel in random_sequence_array))
+
+def divide_into_8bit(file):
+    with open(file, 'r') as file:
+        binary_sequence = file.read().strip()
+
+    # Check if the length of the sequence is divisible by 8
+    if len(binary_sequence) % 8 != 0:
+        raise ValueError("Sequence length is not divisible by 8.")
+
+    # Divide the sequence into 8-bit segments and convert each segment to an integer
+    eight_bit_integers = [
+        int(binary_sequence[i:i+8], 2) for i in range(0, len(binary_sequence), 8)
+    ]
+
+    return eight_bit_integers
+
+def histograms(extractor_array, post_processed_array):
+    plt.hist(post_processed_array, bins=range(256), color="blue", density=True)
     plt.title("Histogram of Eight-bit Numbers")
     plt.xlabel("Value")
     plt.ylabel("Probability Density")
     plt.show()
-
-    entropy_value = entropy(np.histogram(eight_bit_array, bins=range(256), density=True)[0])
-    print("Entropy:", entropy_value)
-
-    # saving txts
-    flattened_image = binary_image.flatten()
-    binary_image_str = ''.join(str(pixel) for pixel in flattened_image)
-    with open("binary_image.txt", "w") as f:
-        f.write(binary_image_str.replace("255", "1"))
-
-    random_sequence_str = ''.join(str(bit) for bit in random_sequence_array)
-    with open("random_sequence_array.txt", "w") as f:
-        f.write(random_sequence_str)
-
-    with open('binary_image.txt', 'r') as file:
-        binary_image_str = file.read().strip()
-
-    binary_segments = [binary_image_str[i:i + 8] for i in range(0, len(binary_image_str), 8)]
-    extractor_array = np.array([int(segment, 2) for segment in binary_segments])
-    print(extractor_array)
 
     plt.hist(extractor_array, bins=range(256), color="blue", density=True)
     plt.title("Histogram after extractor")
     plt.xlabel("Value")
     plt.ylabel("Probability Density")
     plt.show()
+
+
+def singleProcessing(image):
+    process_image(image)
+    extractor_array = divide_into_8bit("binary_image.txt")
+    post_processed_array = divide_into_8bit("random_sequence_array.txt")
+    entropy_value = entropy(np.histogram(post_processed_array, bins=range(256), density=True)[0])
+    print("Entropy:", entropy_value)
+
+    print("Post-processed array length:" , len(post_processed_array))
+    histograms(extractor_array, post_processed_array)
+
+def multiProcessing(dir):
+    file_paths = [os.path.join(dir, f"{i}.jpg") for i in range(1, 9)]
+    # Process each image
+    for file_path in file_paths:
+        process_image(file_path)
+    extractor_array = divide_into_8bit("binary_image.txt")
+    post_processed_array = divide_into_8bit("random_sequence_array.txt")
+    entropy_value = entropy(np.histogram(post_processed_array, bins=range(256), density=True)[0])
+    print("Entropy:", entropy_value)
+
+    print("Post-processed array length:" , len(post_processed_array))
+    histograms(extractor_array, post_processed_array)
+
+def main():
+    if (os.path.exists("binary_image.txt")):
+        os.remove("binary_image.txt")
+    if (os.path.exists("random_sequence_array.txt")):
+        os.remove("random_sequence_array.txt")
+
+    start_time = time.time()
+    #singleProcessing("kot.jpg")
+    multiProcessing(os.path.join(os.getcwd(), "4000") )
+    stop_time = time.time()
 
     duration = stop_time - start_time
     print("Czas trwania:", duration, "sekund")
